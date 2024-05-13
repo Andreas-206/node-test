@@ -1,70 +1,77 @@
 import HttpError from '../helpers/HttpError.js'
-import Contact from '../schemas/contactModel.js'
+import ctrlWrapper from '../helpers/ctrlWrapper.js'
+import Contact from '../models/contact.js'
 
-export const getAllContacts = async (req, res, next) => {
-	try {
-		const result = await Contact.find()
-		res.json(result)
-	} catch (error) {
-		next({})
+const getAllContacts = async (req, res) => {
+	const { _id: owner } = req.user
+	const { favorite, page = 1, limit = 20 } = req.query
+	const skip = (page - 1) * limit
+
+	const query = {
+		owner,
 	}
+
+	if (favorite) {
+		query.favorite = favorite
+	}
+
+	const result = await Contact.find(query, '', { skip, limit })
+	res.json(result)
 }
 
-export const getOneContact = async (req, res, next) => {
+const getOneContact = async (req, res) => {
 	const { id } = req.params
-	try {
-		const result = await Contact.findById(id)
-		if (!result) throw HttpError(404)
+	const { _id: owner } = req.user
 
-		res.json(result)
-	} catch (error) {
-		next(error.status ? error : {})
+	const result = await Contact.find({ _id: id, owner })
+
+	if (!result) {
+		throw HttpError(404)
 	}
+
+	res.json(...result)
 }
 
-export const deleteContact = async (req, res, next) => {
+const deleteContact = async (req, res) => {
 	const { id } = req.params
-	try {
-		const result = await Contact.findByIdAndDelete(id)
-		if (!result) throw HttpError(404)
-		res.json(result)
-	} catch (error) {
-		next(error.status ? error : {})
+	const { _id: owner } = req.user
+
+	const result = await Contact.findOneAndDelete({ _id: id, owner })
+
+	if (!result) {
+		throw HttpError(404)
 	}
+
+	res.json(result)
 }
 
-export const createContact = async (req, res, next) => {
-	try {
-		const result = await Contact.create(req.body)
-		res.status(201).json(result)
-	} catch (error) {
-		next({})
-	}
+const createContact = async (req, res) => {
+	const { _id: owner } = req.user
+
+	const result = await Contact.create({ ...req.body, owner })
+
+	res.status(201).json(result)
 }
 
-export const updateContact = async (req, res, next) => {
+const updateContact = async (req, res) => {
 	const { id } = req.params
-	try {
-		if (Object.keys(req.body).length === 0)
-			throw HttpError(400, 'Body must have at least one field')
-		const result = await Contact.findByIdAndUpdate(id, req.body, { new: true })
+	const { _id: owner } = req.user
 
-		if (!result) throw HttpError(404)
+	const result = await Contact.findOneAndUpdate({ _id: id, owner }, req.body, {
+		new: true,
+	})
 
-		res.json(result)
-	} catch (error) {
-		next(error.status ? error : {})
+	if (!result) {
+		throw HttpError(404)
 	}
+
+	res.json(result)
 }
 
-export const updateStatusContact = async (req, res, next) => {
-	const { id } = req.params
-	try {
-		const result = await Contact.findByIdAndUpdate(id, req.body, { new: true })
-		if (!result) throw HttpError(404)
-
-		res.json(result)
-	} catch (error) {
-		next(error.status ? error : {})
-	}
+export default {
+	getAll: ctrlWrapper(getAllContacts),
+	getById: ctrlWrapper(getOneContact),
+	remove: ctrlWrapper(deleteContact),
+	create: ctrlWrapper(createContact),
+	update: ctrlWrapper(updateContact),
 }
