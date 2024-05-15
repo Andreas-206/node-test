@@ -11,7 +11,7 @@ mongoose
 	.connect(DB_HOST)
 	.then(() => {
 		console.log('Database connection successful')
-		app.listen(8080, () => {
+		app.listen(8000, () => {
 			console.log('Server is running.')
 		})
 	})
